@@ -192,7 +192,7 @@ Shader "lit/Phong"
 				o.binormal_dir = normalize(cross(o.normal_dir,o.tangent_dir)) * v.tangent.w;
 				o.pos_world = mul(unity_ObjectToWorld, v.vertex).xyz;
 				TRANSFER_VERTEX_TO_FRAGMENT(o);
-				return o;
+				return o; 
 			}
 
 			half4 frag(v2f i) : SV_Target
