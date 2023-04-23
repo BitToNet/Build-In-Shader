@@ -38,15 +38,15 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AOAdjust: 1
+    - _AOAdjust: 0.711
     - _Expose: 2
     - _NormalIntensity: 1
     - _Rotate: 0
     - _Roughness: 1
-    - _RoughnessBrightness: 9.36
-    - _RoughnessContrast: 2.16
+    - _RoughnessBrightness: 22.73
+    - _RoughnessContrast: 3.62
     - _RoughnessMax: 1
-    - _RoughnessMin: 0
+    - _RoughnessMin: 0.202
     m_Colors:
-    - _Tint: {r: 0.7264151, g: 0.7264151, b: 0.7264151, a: 1}
+    - _Tint: {r: 0.7830189, g: 0.7830189, b: 0.7830189, a: 1}
   m_BuildTextureStacks: []

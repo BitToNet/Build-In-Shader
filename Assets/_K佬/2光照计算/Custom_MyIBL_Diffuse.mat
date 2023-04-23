@@ -25,7 +25,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _CubeMap:
-        m_Texture: {fileID: 8900000, guid: b6b4771df8f918946982dc9ad7e431e6, type: 3}
+        m_Texture: {fileID: 8900000, guid: c80e53fd254bc7042bc94d2336ed9be7, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _NormalMap:
@@ -38,14 +38,14 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _AOAdjust: 1
-    - _Expose: 2
+    - _AOAdjust: 0.556
+    - _Expose: 1
     - _NormalIntensity: 1
     - _Rotate: 0
-    - _RoughnessBrightness: 10
-    - _RoughnessContrast: 2
+    - _RoughnessBrightness: 1
+    - _RoughnessContrast: 1
     - _RoughnessMax: 1
-    - _RoughnessMin: 0
+    - _RoughnessMin: 0.429
     m_Colors:
-    - _Tint: {r: 1, g: 0.8392157, b: 0.60784316, a: 1}
+    - _Tint: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
