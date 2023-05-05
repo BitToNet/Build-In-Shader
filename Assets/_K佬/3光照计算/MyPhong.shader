@@ -98,8 +98,10 @@ Shader "Custom/Phong"
                 half3 tangent_dir = normalize(i.tangent_dir);
                 half3 binormal_dir = normalize(i.binormal_dir);
                 float3x3 TBN = float3x3(tangent_dir, binormal_dir, normal_dir);
+                // 得出切线空间下的视线方向
                 half3 view_tangentspace = normalize(mul(TBN, view_dir));
 
+                // 视差贴图技术，陡峭视差映射，偏移uv
                 half2 uv_parallax = i.uv;
                 for (int j = 0; j < 10; j++)
                 {
@@ -115,7 +117,7 @@ Shader "Custom/Phong"
                 // 法线贴图的范围是从0到1，我们要改成-1到1，我们要做解码的操作
                 float3 normal_data = UnpackNormal(normalmap);
 
-
+                // 根据切线空间下的三个向量偏移法线方向
                 // normal_dir = normalize(mul(normal_data.xyz, TBN));
                 normal_dir = normalize(
                     tangent_dir * normal_data.x * _NormalIntensity + binormal_dir * normal_data.y * _NormalIntensity +
