@@ -13,6 +13,9 @@ Shader "Custom/My_Char_Standard"
         _MetalAdjust("Metal Adjust",Range(0,1)) = 0
 
         _EnvDiffuseMap("Env Diffuse Map",Cube) = "white"{}
+        _SkinLUT("皮肤查找表",2D) = "white"{}
+        _CureOffset("_CureOffset",Range(-1,1)) = 0
+        _LutOffset("_LutOffset",Range(-1,1)) = 0
 
         [Header(IBL)]
         _RoughnessContrast("Roughness Contrast",Range(0.01,10)) = 1
@@ -95,6 +98,9 @@ Shader "Custom/My_Char_Standard"
             samplerCUBE _EnvDiffuseMap;
             // 移动平台无法直接使用HDR，需要加一步解码操作
             float4 _EnvDiffuseMap_HDR;
+            sampler2D _SkinLUT;
+            float _CureOffset;
+            float _LutOffset;
 
             half4 custom_SHAr;
             half4 custom_SHAg;
@@ -184,6 +190,9 @@ Shader "Custom/My_Char_Standard"
                 // 粗糙度信息：影响光滑度
                 half roughness = saturate(comp_mask.r + _RoughnessAdjust);
 
+                // 皮肤区域
+                half skin_area = 1.0 - comp_mask.b;
+
                 // 法线贴图的范围是从0到1，我们要改成-1到1，我们要做解码的操作
                 float3 normal_data = UnpackNormal(tex2D(_NormalMap, i.uv));
 
@@ -200,7 +209,16 @@ Shader "Custom/My_Char_Standard"
                 // 直接光漫反射 
                 // 比较阴影和漫反射，哪个更暗取哪个
                 half diff_term = max(0.0, dot(normal_dir, light_dir));
-                half3 direct_diffuse = diff_term * base_color.xyz * atten * _LightColor0.xyz;
+                half half_lambert = (diff_term + 1.0) * 0.5;
+                half3 common_diffuse = diff_term * base_color * atten * _LightColor0.xyz;
+                // 皮肤效果
+                half2 uv_lut = half2(diff_term * atten + _LutOffset, _CureOffset);
+                half3 lut_color_gamma = tex2D(_SkinLUT, uv_lut);
+                half3 lut_color = pow(lut_color_gamma, 2.2);
+                half3 sss_diffuse = lut_color * base_color * _LightColor0.xyz * half_lambert;
+
+                half3 direct_diffuse = lerp(common_diffuse, sss_diffuse, skin_area);
+                // half3 direct_diffuse = common_diffuse;
 
                 // 直接光镜面反射
                 half3 half_dir = normalize(light_dir + view_dir);
@@ -221,7 +239,6 @@ Shader "Custom/My_Char_Standard"
 
 
                 // 间接光漫反射 SH
-                half half_lambert = (diff_term + 1.0) * 0.5;
                 // float3 env_diffuse = custom_sh(normal_dir) * base_color * half_lambert;
                 // 采样IBL环境贴图
                 half4 color_diffuse_cubemap = texCUBElod(_EnvDiffuseMap, float4(normal_dir, mip_level));
@@ -245,7 +262,6 @@ Shader "Custom/My_Char_Standard"
 
                 // 最终加上环境光
                 half3 final_color = (direct_diffuse + direct_specular + env_diffuse + env_specular);
-                // half3 final_color = (env_specular );
                 half3 tone_color = ACESFilm(final_color);
                 tone_color = pow(tone_color, 1.0 / 2.2);
 
