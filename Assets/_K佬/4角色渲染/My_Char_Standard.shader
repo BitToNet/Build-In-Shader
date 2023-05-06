@@ -2,36 +2,33 @@ Shader "Custom/My_Char_Standard"
 {
     Properties
     {
-        _BaseMap ("Texture", 2D) = "white" {}
-        _CompMap ("_CompMap(RM-粗糙度、金属度)", 2D) = "white" {}
-        _NormalMap("NormalMap",2D) = "bump"{}
-        _NormalIntensity("Normal Intensity（法线强度）",Range(0.0,5.0)) = 1.0
-        _SpecShininess("Spec Shininess",Range(0.01,100)) = 10
-        _SpecIntensity("SpecIntensity",Range(0.01,5)) = 1.0
-
-        _RoughnessAdjust("Roughness Adjust",Range(0,1)) = 0
-        _MetalAdjust("Metal Adjust",Range(0,1)) = 0
-
-        _EnvDiffuseMap("Env Diffuse Map",Cube) = "white"{}
-        _SkinLUT("皮肤查找表",2D) = "white"{}
-        _CureOffset("_CureOffset",Range(-1,1)) = 0
-        _LutOffset("_LutOffset",Range(-1,1)) = 0
-
-        [Header(IBL)]
-        _RoughnessContrast("Roughness Contrast",Range(0.01,10)) = 1
-        _RoughnessBrightness("Roughness Brightness",Float) = 1
-        _RoughnessMin("Rough Min",Range(0,1)) = 0
-        _RoughnessMax("Rough Max",Range(0,1)) = 1
-        _EnvSpecularMap("Env Specular Map",Cube) = "white"{}
-        _Tint("Tint",Color) = (1,1,1,1)
-        _Expose("Expose",Float) = 1.0
-        _Rotate("Rotate",Range(0,360)) = 0
-
-
         [Toggle(_DIFFUSE_CHECK_ON)] _DIFFUSE_CHECK_ON("_DIFFUSE_CHECK_ON",Float) = 1.0
         [Toggle(_SPEC_CHECK_ON)] _SPEC_CHECK_ON("_SPEC_CHECK_ON",Float) = 1.0
         [Toggle(_SH_CHECK_ON)] _SH_CHECK_ON("_SH_CHECK_ON",Float) = 1.0
         [Toggle(_IBL_CHECK_ON)] _IBL_CHECK_ON("_IBL_CHECK_ON",Float) = 1.0
+        
+        _BaseMap ("Texture", 2D) = "white" {}
+        _CompMap ("_CompMap(RM-粗糙度、金属度)", 2D) = "white" {}
+        _NormalMap("NormalMap",2D) = "bump"{}
+        _NormalIntensity("法线强度",Range(0.0,5.0)) = 1.0
+        [Header(Spec)]
+        _SpecShininess("对比度",Range(0.01,100)) = 10
+        _SpecIntensity("强度",Range(0.01,5)) = 1.0
+
+        _RoughnessAdjust("粗糙度校准",Range(-1,1)) = 0
+        _MetalAdjust("金属度校准",Range(-1,1)) = 0
+
+        _EnvDiffuseMap("Env Diffuse Map",Cube) = "white"{}
+        _EnvDiffuseMapExpose("漫反射曝光",Float) = 1.0
+        _SkinLUT("皮肤查找表",2D) = "white"{}
+        _LutOffset("_LutOffset",Range(-1,1)) = 0
+
+        [Header(IBL)]
+        _EnvSpecularMap("Env Specular Map",Cube) = "white"{}
+        _EnvSpecularMapExpose("镜面反射曝光",Float) = 1.0
+
+
+
 
         [HideInInspector]custom_SHAr("Custom SHAr", Vector) = (0, 0, 0, 0)
         [HideInInspector]custom_SHAg("Custom SHAg", Vector) = (0, 0, 0, 0)
@@ -92,23 +89,17 @@ Shader "Custom/My_Char_Standard"
             float4 _LightColor0;
             float _SpecShininess;
             float _SpecIntensity;
-            float _RoughnessContrast;
-            float _RoughnessBrightness;
-            float _RoughnessMin;
-            float _RoughnessMax;
-            float _Rotate;
             samplerCUBE _EnvSpecularMap;
             // 移动平台无法直接使用HDR，需要加一步解码操作
             float4 _EnvSpecularMap_HDR;
-            float4 _Tint;
-            float _Expose;
+            float _EnvSpecularMapExpose;
+            float _EnvDiffuseMapExpose;
             float _RoughnessAdjust;
             float _MetalAdjust;
             samplerCUBE _EnvDiffuseMap;
             // 移动平台无法直接使用HDR，需要加一步解码操作
             float4 _EnvDiffuseMap_HDR;
             sampler2D _SkinLUT;
-            float _CureOffset;
             float _LutOffset;
 
             half4 custom_SHAr;
@@ -193,8 +184,8 @@ Shader "Custom/My_Char_Standard"
 
                 // 金属度信息
                 half metal = saturate(comp_mask.g + _MetalAdjust);
-                float4 base_color = albedo_color * (1 - metal); // 非金属固有色，金属没有漫反射
-                float4 spec_color = lerp(0.04, albedo_color, metal); // 高光颜色
+                float3 base_color = albedo_color.rgb * (1 - metal); // 非金属固有色，金属没有漫反射
+                float3 spec_color = lerp(0.04, albedo_color, metal); // 高光颜色
 
                 // 粗糙度信息：影响光滑度
                 half roughness = saturate(comp_mask.r + _RoughnessAdjust);
@@ -221,7 +212,7 @@ Shader "Custom/My_Char_Standard"
                 half half_lambert = (diff_term + 1.0) * 0.5;
                 half3 common_diffuse = diff_term * base_color * atten * _LightColor0.xyz;
                 // 皮肤效果
-                half2 uv_lut = half2(diff_term * atten + _LutOffset, _CureOffset);
+                half2 uv_lut = half2(diff_term * atten + _LutOffset, 1.0);
                 half3 lut_color_gamma = tex2D(_SkinLUT, uv_lut);
                 half3 lut_color = pow(lut_color_gamma, 2.2);
                 half3 sss_diffuse = lut_color * base_color * _LightColor0.xyz * half_lambert;
@@ -249,10 +240,6 @@ Shader "Custom/My_Char_Standard"
                 // 间接光漫反射 SH
                 // float3 env_diffuse = custom_sh(normal_dir) * base_color * half_lambert;
                 // 采样IBL环境贴图
-                // 增加粗糙度贴图的对比度、亮度
-                roughness = saturate(pow(roughness, _RoughnessContrast) * _RoughnessBrightness);
-                // 限制粗糙度范围
-                roughness = lerp(_RoughnessMin, _RoughnessMax, roughness);
                 // 抄unity代码，把线性变化改为有弧度的曲线
                 roughness = roughness * (1.7 - 0.7 * roughness);
                 // pbr里面一般是使用第六个层级
@@ -260,7 +247,7 @@ Shader "Custom/My_Char_Standard"
                 half4 color_diffuse_cubemap = texCUBElod(_EnvDiffuseMap, float4(normal_dir, mip_level));
                 // 确保在移动端能拿到HDR信息
                 half3 env_diffuse_color = DecodeHDR(color_diffuse_cubemap, _EnvDiffuseMap_HDR);
-                half3 env_diffuse = env_diffuse_color * _Expose * base_color * half_lambert;
+                half3 env_diffuse = env_diffuse_color * _EnvDiffuseMapExpose * base_color * half_lambert;
                 #ifdef _SH_CHECK_ON
                 // 提亮皮肤
                 env_diffuse = lerp(env_diffuse * 0.5, env_diffuse, skin_area);
@@ -272,14 +259,12 @@ Shader "Custom/My_Char_Standard"
                 // 间接光镜面反射 IBL
                 // 视线反射方向
                 half3 reflect_dir = reflect(-view_dir, normal_dir);
-                // 对反射方向做手动偏移，可以设置环境贴图内部的偏转
-                reflect_dir = RotateAround(_Rotate, reflect_dir);
                 // 采样IBL环境贴图
                 half4 color_cubemap = texCUBElod(_EnvSpecularMap, float4(reflect_dir, mip_level));
                 // 确保在移动端能拿到HDR信息
                 half3 env_specular_color = DecodeHDR(color_cubemap, _EnvSpecularMap_HDR);
                 #ifdef _IBL_CHECK_ON
-                half3 env_specular = env_specular_color * _Expose * spec_color * half_lambert;
+                half3 env_specular = env_specular_color * _EnvSpecularMapExpose * spec_color * half_lambert;
                 #else
                 half3 env_specular = half3(0.0,0.0,0.0);
                 #endif
