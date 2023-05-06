@@ -28,6 +28,11 @@ Shader "Custom/My_Char_Standard"
         _Rotate("Rotate",Range(0,360)) = 0
 
 
+        [Toggle(_DIFFUSE_CHECK_ON)] _DIFFUSE_CHECK_ON("_DIFFUSE_CHECK_ON",Float) = 1.0
+        [Toggle(_SPEC_CHECK_ON)] _SPEC_CHECK_ON("_SPEC_CHECK_ON",Float) = 1.0
+        [Toggle(_SH_CHECK_ON)] _SH_CHECK_ON("_SH_CHECK_ON",Float) = 1.0
+        [Toggle(_IBL_CHECK_ON)] _IBL_CHECK_ON("_IBL_CHECK_ON",Float) = 1.0
+
         [HideInInspector]custom_SHAr("Custom SHAr", Vector) = (0, 0, 0, 0)
         [HideInInspector]custom_SHAg("Custom SHAg", Vector) = (0, 0, 0, 0)
         [HideInInspector]custom_SHAb("Custom SHAb", Vector) = (0, 0, 0, 0)
@@ -54,6 +59,10 @@ Shader "Custom/My_Char_Standard"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile_fwdbase
+            #pragma shader_feature _DIFFUSE_CHECK_ON
+            #pragma shader_feature _SPEC_CHECK_ON
+            #pragma shader_feature _SH_CHECK_ON
+            #pragma shader_feature _IBL_CHECK_ON
 
             #include "UnityCG.cginc"
             #include "AutoLight.cginc"
@@ -206,7 +215,7 @@ Shader "Custom/My_Char_Standard"
                 half3 light_dir = normalize(_WorldSpaceLightPos0.xyz);
                 half atten = LIGHT_ATTENUATION(i);
 
-                // 直接光漫反射 
+                // 直接光漫反射
                 // 比较阴影和漫反射，哪个更暗取哪个
                 half diff_term = max(0.0, dot(normal_dir, light_dir));
                 half half_lambert = (diff_term + 1.0) * 0.5;
@@ -216,8 +225,12 @@ Shader "Custom/My_Char_Standard"
                 half3 lut_color_gamma = tex2D(_SkinLUT, uv_lut);
                 half3 lut_color = pow(lut_color_gamma, 2.2);
                 half3 sss_diffuse = lut_color * base_color * _LightColor0.xyz * half_lambert;
-
+                #ifdef _DIFFUSE_CHECK_ON
                 half3 direct_diffuse = lerp(common_diffuse, sss_diffuse, skin_area);
+                #else
+                half3 direct_diffuse = half3(0.0,0.0,0.0);
+                #endif
+
 
                 // 直接光镜面反射
                 half3 half_dir = normalize(light_dir + view_dir);
@@ -227,8 +240,15 @@ Shader "Custom/My_Char_Standard"
                 half spec_term = pow(max(0.0, NdotH), lerp(1, _SpecShininess, smoothness) * smoothness);
                 // 皮肤油光效果
                 half3 spec_skin_color = lerp(spec_color, 0.2, skin_area);
+                #ifdef _SPEC_CHECK_ON
                 half3 direct_specular = spec_term * spec_skin_color * _LightColor0.xyz * _SpecIntensity * atten;
+                #else
+                half3 direct_specular = half3(0.0,0.0,0.0);
+                #endif
 
+                // 间接光漫反射 SH
+                // float3 env_diffuse = custom_sh(normal_dir) * base_color * half_lambert;
+                // 采样IBL环境贴图
                 // 增加粗糙度贴图的对比度、亮度
                 roughness = saturate(pow(roughness, _RoughnessContrast) * _RoughnessBrightness);
                 // 限制粗糙度范围
@@ -237,17 +257,16 @@ Shader "Custom/My_Char_Standard"
                 roughness = roughness * (1.7 - 0.7 * roughness);
                 // pbr里面一般是使用第六个层级
                 float mip_level = roughness * 6.0;
-
-
-                // 间接光漫反射 SH
-                // float3 env_diffuse = custom_sh(normal_dir) * base_color * half_lambert;
-                // 采样IBL环境贴图
                 half4 color_diffuse_cubemap = texCUBElod(_EnvDiffuseMap, float4(normal_dir, mip_level));
                 // 确保在移动端能拿到HDR信息
                 half3 env_diffuse_color = DecodeHDR(color_diffuse_cubemap, _EnvDiffuseMap_HDR);
                 half3 env_diffuse = env_diffuse_color * _Expose * base_color * half_lambert;
+                #ifdef _SH_CHECK_ON
                 // 提亮皮肤
                 env_diffuse = lerp(env_diffuse * 0.5, env_diffuse, skin_area);
+                #else
+                env_diffuse = half3(0.0,0.0,0.0);
+                #endif
 
 
                 // 间接光镜面反射 IBL
@@ -259,8 +278,11 @@ Shader "Custom/My_Char_Standard"
                 half4 color_cubemap = texCUBElod(_EnvSpecularMap, float4(reflect_dir, mip_level));
                 // 确保在移动端能拿到HDR信息
                 half3 env_specular_color = DecodeHDR(color_cubemap, _EnvSpecularMap_HDR);
-
+                #ifdef _IBL_CHECK_ON
                 half3 env_specular = env_specular_color * _Expose * spec_color * half_lambert;
+                #else
+                half3 env_specular = half3(0.0,0.0,0.0);
+                #endif
 
                 // 最终加上环境光
                 half3 final_color = (direct_diffuse + direct_specular + env_diffuse + env_specular);
