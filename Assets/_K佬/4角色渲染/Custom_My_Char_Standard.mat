@@ -66,7 +66,7 @@ Material:
     - _CureOffset: 1
     - _DIFFUSE_CHECK_ON: 1
     - _DiffuseCheck: 1
-    - _EnvDiffuseMapExpose: 1
+    - _EnvDiffuseMapExpose: 1.5
     - _EnvSpecularMapExpose: 1
     - _Expose: 2.36
     - _IBL_CHECK_ON: 1
@@ -74,7 +74,7 @@ Material:
     - _MetalAdjust: 0
     - _NormalIntensity: 1
     - _Rotate: 0
-    - _RoughnessAdjust: -0.1
+    - _RoughnessAdjust: -0.5
     - _RoughnessBrightness: 1
     - _RoughnessContrast: 1
     - _RoughnessMax: 1
@@ -82,7 +82,7 @@ Material:
     - _SH_CHECK_ON: 1
     - _SPEC_CHECK_ON: 1
     - _Shininess: 1
-    - _SpecIntensity: 0.01
+    - _SpecIntensity: 1
     - _SpecShininess: 60
     m_Colors:
     - _Tint: {r: 1, g: 1, b: 1, a: 1}
