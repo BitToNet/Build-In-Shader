@@ -218,7 +218,6 @@ Shader "Custom/My_Char_Standard"
                 half3 sss_diffuse = lut_color * base_color * _LightColor0.xyz * half_lambert;
 
                 half3 direct_diffuse = lerp(common_diffuse, sss_diffuse, skin_area);
-                // half3 direct_diffuse = common_diffuse;
 
                 // 直接光镜面反射
                 half3 half_dir = normalize(light_dir + view_dir);
@@ -226,7 +225,9 @@ Shader "Custom/My_Char_Standard"
                 half smoothness = 1.0 - roughness;
                 // 最后*smoothness是作者加的经验值
                 half spec_term = pow(max(0.0, NdotH), lerp(1, _SpecShininess, smoothness) * smoothness);
-                half3 direct_specular = spec_term * spec_color * _LightColor0.xyz * _SpecIntensity * atten;
+                // 皮肤油光效果
+                half3 spec_skin_color = lerp(spec_color, 0.2, skin_area);
+                half3 direct_specular = spec_term * spec_skin_color * _LightColor0.xyz * _SpecIntensity * atten;
 
                 // 增加粗糙度贴图的对比度、亮度
                 roughness = saturate(pow(roughness, _RoughnessContrast) * _RoughnessBrightness);
@@ -244,8 +245,9 @@ Shader "Custom/My_Char_Standard"
                 half4 color_diffuse_cubemap = texCUBElod(_EnvDiffuseMap, float4(normal_dir, mip_level));
                 // 确保在移动端能拿到HDR信息
                 half3 env_diffuse_color = DecodeHDR(color_diffuse_cubemap, _EnvDiffuseMap_HDR);
-
                 half3 env_diffuse = env_diffuse_color * _Expose * base_color * half_lambert;
+                // 提亮皮肤
+                env_diffuse = lerp(env_diffuse * 0.5, env_diffuse, skin_area);
 
 
                 // 间接光镜面反射 IBL
